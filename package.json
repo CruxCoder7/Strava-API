@@ -11,7 +11,9 @@
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "ngrok": "^4.3.3",
+    "strava-v3": "^2.1.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.22"

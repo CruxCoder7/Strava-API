@@ -1,0 +1,235 @@
+{
+	"info": {
+		"_postman_id": "d74c057a-72aa-4f71-9d22-5d7d12b49cd0",
+		"name": "Strava API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "17203731"
+	},
+	"item": [
+		{
+			"name": "Paste in the browser",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://www.strava.com/oauth/authorize?client_id={{clientId}}&response_type=code&redirect_uri=http://localhost:3000/exchange_token&scope=read_all,profile:read_all,activity:read_all,activity:write,profile:write",
+					"protocol": "https",
+					"host": [
+						"www",
+						"strava",
+						"com"
+					],
+					"path": [
+						"oauth",
+						"authorize"
+					],
+					"query": [
+						{
+							"key": "client_id",
+							"value": "{{clientId}}"
+						},
+						{
+							"key": "response_type",
+							"value": "code"
+						},
+						{
+							"key": "redirect_uri",
+							"value": "http://localhost:3000/exchange_token"
+						},
+						{
+							"key": "scope",
+							"value": "read_all,profile:read_all,activity:read_all,activity:write,profile:write"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Exchange code for access token",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let jsonResp = pm.response.json()\r",
+							"\r",
+							"if(pm.response.code == 200){\r",
+							"    pm.environment.set(\"refreshToken\", jsonResp.refresh_token);\r",
+							"    pm.environment.set(\"accessToken\", jsonResp.access_token);\r",
+							"}\r",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "https://www.strava.com/oauth/token?client_id={{clientId}}&client_secret={{clientSecret}}&code={{authorizationCode}}&grant_type=authorization_code",
+					"protocol": "https",
+					"host": [
+						"www",
+						"strava",
+						"com"
+					],
+					"path": [
+						"oauth",
+						"token"
+					],
+					"query": [
+						{
+							"key": "client_id",
+							"value": "{{clientId}}"
+						},
+						{
+							"key": "client_secret",
+							"value": "{{clientSecret}}"
+						},
+						{
+							"key": "code",
+							"value": "{{authorizationCode}}"
+						},
+						{
+							"key": "grant_type",
+							"value": "authorization_code"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Refresh if needed",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"let jsonResp = pm.response.json()\r",
+							"\r",
+							"if(pm.response.code == 200){\r",
+							"    pm.environment.set(\"refreshToken\", jsonResp.refresh_token);\r",
+							"    pm.environment.set(\"accessToken\", jsonResp.access_token);\r",
+							"}\r",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "https://www.strava.com/oauth/token?client_id={{clientId}}&client_secret={{clientSecret}}&grant_type=refresh_token&refresh_token={{refreshToken}}",
+					"protocol": "https",
+					"host": [
+						"www",
+						"strava",
+						"com"
+					],
+					"path": [
+						"oauth",
+						"token"
+					],
+					"query": [
+						{
+							"key": "client_id",
+							"value": "{{clientId}}"
+						},
+						{
+							"key": "client_secret",
+							"value": "{{clientSecret}}"
+						},
+						{
+							"key": "grant_type",
+							"value": "refresh_token"
+						},
+						{
+							"key": "refresh_token",
+							"value": "{{refreshToken}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get activities",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://www.strava.com/api/v3/athlete/activities?access_token={{accessToken}}",
+					"protocol": "https",
+					"host": [
+						"www",
+						"strava",
+						"com"
+					],
+					"path": [
+						"api",
+						"v3",
+						"athlete",
+						"activities"
+					],
+					"query": [
+						{
+							"key": "access_token",
+							"value": "{{accessToken}}"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Activity",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\": \"New Act101\",\r\n    \"type\": \"Hike\",\r\n    \"sport_type\": \"Hike\",\r\n    \"start_date_local\": \"2016-10-20T19:20:30+01:00\",\r\n    \"elapsed_time\": 100\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://www.strava.com/api/v3/activities?access_token=30bd0d0c286ca4192cc090f7136686d1729989d0",
+					"protocol": "https",
+					"host": [
+						"www",
+						"strava",
+						"com"
+					],
+					"path": [
+						"api",
+						"v3",
+						"activities"
+					],
+					"query": [
+						{
+							"key": "access_token",
+							"value": "30bd0d0c286ca4192cc090f7136686d1729989d0"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "test",
+			"request": {
+				"method": "POST",
+				"header": []
+			},
+			"response": []
+		}
+	]
+}
