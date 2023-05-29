@@ -1,35 +1,13 @@
 const express = require('express')
 const cors = require('cors');
+const { default: axios } = require('axios');
 
 const app = express()
 app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
 app.use(cors())
+
 const auth_link = "https://www.strava.com/oauth/token"
-
-app.get("/getauthcode", async (req, res) => {
-    res.redirect(`https://www.strava.com/oauth/authorize?client_id=105116&response_type=code&redirect_uri=http://localhost:3000/exchange_token&scope=read_all,profile:read_all,activity:read_all,activity:write,profile:write`);
-})
-
-
-async function reAuthorize(req, res, next) {
-    const dataPromise = await fetch(auth_link, {
-        method: 'post',
-        headers: {
-            'Accept': 'application/json, text/plain, */*',
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            client_id: '105116',
-            client_secret: '055e5db9e4fa7a9bb901b930ec200e7cf71c9bb2',
-            code: 'e1d6d9e5cc87bc82989469bba3e47d285600f364',
-            grant_type: 'authorization_code'
-        })
-    })
-    const data = await dataPromise.json();
-    console.log(data);
-    // req.refresh_token = data.refresh_token;
-}
 
 async function refreshToken(req, res, next) {
     const dataPromise = await fetch(auth_link, {
@@ -51,6 +29,26 @@ async function refreshToken(req, res, next) {
     next();
 }
 
+function DateToLastWeekEpochTimestamp(date) {
+    const currentTime = date;
+
+    const oneWeekAgo = currentTime - (7 * 24 * 60 * 60 * 1000);
+
+    const oneWeekAgoInSeconds = Math.floor(oneWeekAgo / 1000);
+
+    return oneWeekAgoInSeconds
+
+}
+
+function DateToEpochTimestamp(date) {
+    const epoch = Math.floor(date / 1000)
+    return epoch
+}
+
+
+app.get("/getauthcode", async (req, res) => {
+    res.redirect(`https://www.strava.com/oauth/authorize?client_id=105116&response_type=code&redirect_uri=http://localhost:3000/exchange_token&scope=read_all,profile:read_all,activity:read_all,activity:write,profile:write`);
+})
 
 app.get("/exchange_token", async (req, res) => {
     console.log(req.query.code)
@@ -73,29 +71,6 @@ app.get("/exchange_token", async (req, res) => {
     res.send("done");
 
 })
-
-// app.get('/', async (req, res) => {
-//     // const activities_link = `https://www.strava.com/api/v3/activities?access_token=${req.access_token}`
-//     // const dataPromise = await fetch(activities_link);
-//     // const data = dataPromise.json();
-//     // res.json({ data })
-//     let token = "90f48a4de121b45064bff44d5a79561f763fb872";
-
-//     const link = `https://www.strava.com/api/v3/athlete/activities?access_token=${token}&after=1645581871`
-//     try {
-//         const dataPromise = await fetch(link);
-//         const data = await dataPromise.json();
-//         res.json({ data })
-//     } catch (error) {
-//         res.json(error)
-//     }
-
-//     // const stravaa = new strava.client('90f48a4de121b45064bff44d5a79561f763fb872');
-//     // const load = await stravaa.athlete.listActivities({
-//     //     before: 1645581871,
-//     // });
-//     // res.json(load)
-// })
 
 app.get('/createActivity', refreshToken, async (req, res) => {
     const activities_link = `https://www.strava.com/api/v3/activities?access_token=${req.access_token}`
@@ -173,7 +148,6 @@ app.get("/subs", async (req, res) => {
     res.json(val)
 })
 
-
 app.get("/del", async (req, res) => {
     const form = new FormData();
     form.append('client_id', '105116');
@@ -185,5 +159,18 @@ app.get("/del", async (req, res) => {
     });
     res.json({ msg: "done" })
 })
+
+
+app.get("/week", refreshToken, async (req, res) => {
+    const after_epoch = DateToLastWeekEpochTimestamp(new Date())
+    const before_epoch = DateToEpochTimestamp(new Date())
+
+    const link = `https://www.strava.com/api/v3/athlete/activities?before=${before_epoch}&after=${after_epoch}&access_token=${req.access_token}`
+    const response = await axios.get(link)
+
+    res.json(response.data)
+})
+
+
 
 app.listen(3000, () => console.log('listening on 3000'))
