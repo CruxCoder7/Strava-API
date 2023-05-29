@@ -1,16 +1,17 @@
 const express = require('express')
 const cors = require('cors');
-const strava = require('strava-v3');
-const ngrok = require('ngrok');
 
 const app = express()
 app.use(express.urlencoded({ extended: true }))
 app.use(express.json())
 app.use(cors())
-
 const auth_link = "https://www.strava.com/oauth/token"
 
-// strava o-auth screen
+app.get("/getauthcode", async (req, res) => {
+    res.redirect(`https://www.strava.com/oauth/authorize?client_id=105116&response_type=code&redirect_uri=http://localhost:3000/exchange_token&scope=read_all,profile:read_all,activity:read_all,activity:write,profile:write`);
+})
+
+
 async function reAuthorize(req, res, next) {
     const dataPromise = await fetch(auth_link, {
         method: 'post',
@@ -27,8 +28,7 @@ async function reAuthorize(req, res, next) {
     })
     const data = await dataPromise.json();
     console.log(data);
-    req.refresh_token = data.refresh_token;
-    next();
+    // req.refresh_token = data.refresh_token;
 }
 
 async function refreshToken(req, res, next) {
@@ -51,8 +51,27 @@ async function refreshToken(req, res, next) {
     next();
 }
 
-app.get("/exchange_token", (req, res) => {
+
+app.get("/exchange_token", async (req, res) => {
+    console.log(req.query.code)
+    const dataPromise = await fetch(auth_link, {
+        method: 'post',
+        headers: {
+            'Accept': 'application/json, text/plain, */*',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            client_id: '105116',
+            client_secret: '055e5db9e4fa7a9bb901b930ec200e7cf71c9bb2',
+            code: req.query.code,
+            grant_type: 'authorization_code'
+        })
+    })
+    const data = await dataPromise.json();
+    console.log(data);
+
     res.send("done");
+
 })
 
 // app.get('/', async (req, res) => {
@@ -87,11 +106,11 @@ app.get('/createActivity', refreshToken, async (req, res) => {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            name: 'WWE',
-            type: 'Running',
-            sport_type: 'Run',
-            start_date_local: "2022-10-20T19:20:30+01:00",
-            elapsed_time: 50,
+            name: 'New Act10142456712',
+            type: 'Hike',
+            sport_type: 'Hike',
+            start_date_local: "2022-01-20T19:20:30+01:00",
+            elapsed_time: 100,
         })
     })
     const response = await dataPromise.json()
@@ -103,7 +122,7 @@ app.get('/getActivity/:id', refreshToken, async (req, res) => {
     const activities_link = `https://www.strava.com/api/v3/activities/${activityId}?access_token=${req.access_token}`
 
     const dataPromise = await fetch(activities_link);
-    const data = dataPromise.json();
+    const data = await dataPromise.json();
     res.json({ data })
 })
 
@@ -115,13 +134,18 @@ app.get('/webhook', (req, res) => {
     })
 });
 
-app.post('/webhook', (req, res) => {
-    console.log("webhook event received!", req.body);
-    res.status(200).send('EVENT_RECEIVED');
+app.post('/webhook', async (req, res) => {
+    console.log("webhook event received!", req.query, req.body);
+
+    const activities_link = `https://www.strava.com/api/v3/activities/${req.body.object_id}?access_token=3c54607addf2e81f52d147462b1ca2d96da8bc52`
+    const dataPromise = await fetch(activities_link);
+    const data = await dataPromise.json();
+    console.log(data);
+    res.status(200).json({ data })
 });
 
 app.get('/', async (req, res) => {
-    const data = await fetch('https://www.strava.com/api/v3/push_subscriptions', {
+    await fetch('https://www.strava.com/api/v3/push_subscriptions', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
@@ -129,18 +153,37 @@ app.get('/', async (req, res) => {
         body: new URLSearchParams({
             client_id: '105116',
             client_secret: '055e5db9e4fa7a9bb901b930ec200e7cf71c9bb2',
-            callback_url: 'https://ce2b-2406-7400-c6-b900-c9d0-fafa-dd0c-cae0.ngrok-free.app/webhook',
+            callback_url: 'https://0849-2406-7400-c6-844-b032-f2f9-f477-fe60.ngrok-free.app/v1/strava/webhook',
             verify_token: 'STRAVA'
         })
     })
+
     const url = new URL('https://www.strava.com/api/v3/push_subscriptions');
     url.searchParams.append('client_id', '105116');
     url.searchParams.append('client_secret', '055e5db9e4fa7a9bb901b930ec200e7cf71c9bb2');
 
-    const dataa = await fetch(url)
-    const val = await dataa.json();
+    const data = await fetch(url)
+    const val = await data.json();
     console.log(val);
 })
 
+app.get("/subs", async (req, res) => {
+    const data = await fetch('https://www.strava.com/api/v3/push_subscriptions?client_id=105116&client_secret=055e5db9e4fa7a9bb901b930ec200e7cf71c9bb2');
+    const val = await data.json();
+    res.json(val)
+})
+
+
+app.get("/del", async (req, res) => {
+    const form = new FormData();
+    form.append('client_id', '105116');
+    form.append('client_secret', '055e5db9e4fa7a9bb901b930ec200e7cf71c9bb2');
+
+    await fetch('https://www.strava.com/api/v3/push_subscriptions/242476', {
+        method: 'DELETE',
+        body: form
+    });
+    res.json({ msg: "done" })
+})
 
 app.listen(3000, () => console.log('listening on 3000'))
